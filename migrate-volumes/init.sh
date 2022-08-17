@@ -70,7 +70,7 @@ build_server $server_port "$volume_docker"
 if [[ -z $target_context ]]; then
   server_ip="$(docker container inspect server --format={{.NetworkSettings.IPAddress}}):80"
 else
-  server_ip="$(docker context inspect $actual_context --format={{.Endpoints.docker.Host}} | cut -d'/' -f3 | cut -d':' -f1):$server_port"
+  server_ip="$(docker context inspect $actual_context --format={{.Endpoints.docker.Host}} | cut -d'/' -f3 | cut -d':' -f1 | cut -d'@' -f2):$server_port"
   docker context use $target_context
 fi
 
