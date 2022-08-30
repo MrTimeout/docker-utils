@@ -1,7 +1,0 @@
-FROM alpine:latest
-
-COPY ./client.sh /entrypoint.sh
-
-RUN apk add --no-cache --update curl && chmod 0755 /entrypoint.sh
-
-ENTRYPOINT ["/bin/sh", "-c", "/entrypoint.sh"]

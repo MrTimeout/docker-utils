@@ -1,5 +1,0 @@
-FROM nginx:latest
-
-COPY ./entrypoint.sh /docker-entrypoint.d/50-tar-compression.sh
-
-RUN chmod 0755 /docker-entrypoint.d/50-tar-compression.sh
