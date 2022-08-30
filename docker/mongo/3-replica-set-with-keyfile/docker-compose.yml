@@ -1,0 +1,106 @@
+version: '3.9'
+services:
+  key_file_generator:
+    container_name: key_file_generator
+    image: alpine:latest
+    volumes:
+    - key_file_volume:/key/ 
+    command: ["/bin/sh", "-c", "apk add --no-cache --update openssl && openssl rand -base64 525 > /key/keyfile && chmod 0600 /key/keyfile"]
+
+  mongo1:
+    container_name: mongo1
+    image: mongo:latest
+    hostname: mongo1
+    restart: 'unless-stopped'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=MrTimeout
+      - MONGO_INITDB_ROOT_PASSWORD=abc123.
+    networks:
+    - mongo-network
+    user: mongodb
+    ports:
+    - 27017:27017
+    volumes:
+    - key_file_volume:/var/mongodb/pki/
+    - ./entrypoint.sh:/entrypoint.sh
+    entrypoint: ["/entrypoint.sh"]
+    command: ["mongod", "--bind_ip_all", "--keyFile", "/var/mongodb/pki/keyfile", "--replSet", "dbrs"]
+    depends_on: 
+    - key_file_generator
+
+  mongo2:
+    container_name: mongo2
+    image: mongo:latest
+    hostname: mongo2
+    restart: 'unless-stopped'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=MrTimeout
+      - MONGO_INITDB_ROOT_PASSWORD=abc123.
+    networks:
+    - mongo-network
+    ports:
+    - 27018:27017
+    volumes:
+    - ./entrypoint.sh:/entrypoint.sh
+    - key_file_volume:/var/mongodb/pki/:ro
+    entrypoint: ["/entrypoint.sh"]
+    command: ["mongod", "--bind_ip_all", "--keyFile", "/var/mongodb/pki/keyfile", "--replSet", "dbrs"]
+    depends_on: 
+    - key_file_generator
+
+  mongo3:
+    container_name: mongo3
+    image: mongo:latest
+    hostname: mongo3
+    restart: 'unless-stopped'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=MrTimeout
+      - MONGO_INITDB_ROOT_PASSWORD=abc123.
+    networks:
+    - mongo-network
+    ports:
+    - 27019:27017
+    volumes:
+    - ./entrypoint.sh:/entrypoint.sh
+    - key_file_volume:/var/mongodb/pki/:ro
+    entrypoint: ["/entrypoint.sh"]
+    command: ["mongod", "--bind_ip_all", "--keyFile", "/var/mongodb/pki/keyfile", "--replSet", "dbrs"]
+    depends_on: 
+    - key_file_generator
+  
+  mongoclient:
+    container_name: mongoclient
+    image: mongoclient:latest
+    build:
+      context: .
+      dockerfile: ./dockerfile
+      args:
+        - TAG=@sha256:a811e62769a642241b168ac34f615fb02da863307a14c4432cea8e5a0f9782b8
+        - VERSION=1.5.4
+      labels:
+        - com.host.description=mongoclient
+    restart: 'no'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=MrTimeout
+      - MONGO_INITDB_ROOT_PASSWORD=abc123.
+    volumes:
+      - ./init.sh:/docker.entrypoint.d/init.sh
+    networks:
+      - mongo-network
+    entrypoint: ["/docker.entrypoint.d/init.sh"]
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+
+networks:
+  mongo-network:
+    driver: bridge
+    external: false
+    name: mongo-network
+
+volumes:
+  key_file_volume:
+    name: key_file_volume
+    external: false
+    driver: local
